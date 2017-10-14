@@ -5,9 +5,112 @@
     <description>hi, I'm a PhD student in Shanghai, with focus on spatial-temporal compution.</description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Fri, 06 Oct 2017 20:24:50 +0800</pubDate>
-    <lastBuildDate>Fri, 06 Oct 2017 20:24:50 +0800</lastBuildDate>
+    <pubDate>Sat, 14 Oct 2017 22:59:32 +0800</pubDate>
+    <lastBuildDate>Sat, 14 Oct 2017 22:59:32 +0800</lastBuildDate>
     <generator>Jekyll v3.4.0</generator>
+    
+      <item>
+        <title>Map Matching</title>
+        <description>&lt;h1 id=&quot;map-matching-for-low-sampling-rate-gps-trajectories&quot;&gt;Map-Matching for Low-Sampling-Rate GPS Trajectories&lt;/h1&gt;
+&lt;p&gt;地图匹配的应用场景
+	* 跟踪车辆
+	* 交通流分析
+	* 行驶方向
+	* 路径规划&lt;/p&gt;
+
+&lt;p&gt;使用地图匹配的原因
+	* GPS给定的用户或者交通工具的位置信息（经度，纬度）在匹配到电子地图的路网上会有误差，如果不进行地图匹配，那么交通工具可能不显示路网上&lt;/p&gt;
+
+&lt;p&gt;隐马尔科夫模型（HMM）
+	* （一阶）马尔科夫链
+		*  给定信息下，只有当前的状态用来预测将来，过去的状态与将来预测无关
+	* 隐马尔科夫模型
+		* 马尔科夫的状态不可见，但是受状态影响的某些变量可见
+		* 地图匹配
+			* 不可见状态：汽车实际运行轨迹
+			* 可见状态：从GPS设备中得到的位置信息
+	* Viterbi算法
+		* 动态规划（DP）算法解隐马尔可夫模型预测问题的算法
+		* 原理：找到全局最优解需要满足每个局部最优解
+			* 最优路径中，任意一点到终点的路径都是该点到终点所有路径中最优的解
+	* 两篇论文中并不是完全参照隐马尔科夫模型&lt;/p&gt;
+
+&lt;p&gt;本文中讨论的目前地图匹配算法的缺点
+	* 对于低采集率的GPS轨迹处理得不够好
+	* 局部算法结果容易被误差影响，精确性；增量算法精确很高，但是对低采集率的GPS轨迹很容易被影响，没有考虑时速信息
+	* 没有对真实的行驶路径进行算法的评估
+	* 没有考虑到道路时速的影响
+	* 对于复杂路况和GPS信号误差很大的点缺乏处理&lt;/p&gt;
+
+&lt;p&gt;ST-Matching算法特点
+	* 针对低采集率的GPS轨迹
+		* 低采集率的GPS轨迹往往可以节省能耗、减少存储空间
+	* 考虑了路网的空间几何和拓扑结构
+	* 考虑了道路实际的时速限制&lt;/p&gt;
+
+&lt;p&gt;ST-Matching算法
+	* 构建候选图
+		* 输入：路网数据库
+		* 处理：寻找每一个采集点的候选点和可能在的道路片段
+		* 输出：一系列候选点和可能的道路片段
+	* 时间空间因素分析
+		* 空间分析
+			* 分析采集点和候选边（投影点）之间的距离
+				* 观测概率𝑁：投影距离越大，观测概率越小
+			* 根据拓扑学信息，避免绕道的路径，采用最短路径测量两个候选路径之间的距离和真实行驶的距离
+				* 状态转移概率
+					* 前后两个真实的位置点的距离越近，状态转移的概率越大
+					* 真实路段上的前后两个点的距离与GPS观测的前后两个点的距离越接近，状态转移概率越大。
+		* 时间分析
+			* 分析两个相邻点之间的平均距离和每条道路上的时速限制
+			* 两个速度越接近其值越大
+		* 输出：候选图
+			* 每个采集点的候选点
+			* 每两个候选点之间的最短路径
+			* 路径和点上都被赋予了基于空间和时间的权重
+				* 点上有N（观测概率）
+				* 边上有V（状态转换概率）和F（时间分析）
+	* 结果匹配
+		* 用权重信息评估了候选图
+			* 每条边空间总权值=起始投射点观测概率&lt;em&gt;起始投射点为起点的路径的转换概率
+			* 每条边总权值=空间权值&lt;/em&gt;时间权值
+			* 一条路径权值，所有边权值之和
+		* 在界面中实现可视化展现，自适应各种终端设备&lt;/p&gt;
+
+&lt;p&gt;比较：ST-Matching算法较下面两个算法都有更好的精确度和时间效率
+	* AFD算法
+	* 增量算法&lt;/p&gt;
+
+&lt;p&gt;一些基本的定义
+	* GPS Log：所有GPS收集到的点的一个集合，每个点包括经纬度信息和时间戳
+	* GPS轨迹T：GPS点所构成的轨迹，通常两个相邻的GPS点的时间戳之间的差值往往𝛥𝑇是采集时间间隙，论文中采用的是∆𝑇 ≥ 2𝑚𝑖𝑛
+	* 路段e：真实的道路片段，包括id、行驶速度、结束点end和一系列中间点
+	* 路网：一个有向图，包括点V和边E
+	* 路网中的路径：由路段构成的集合
+	* 地图匹配：给定一个原始的GPS轨迹T和一个路网G，找到一条路径P可以匹配T的真正路径
+	* 采集点到路段上的投影：e上的c是p的投影&lt;/p&gt;
+
+&lt;p&gt;Hidden Markov Map Matching Through Noise and Sparseness与本文的差别&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;不考虑时间信息/速率信息，因为他们认为这和道路交通状况有很大的关系&lt;/li&gt;
+  &lt;li&gt;使用拓扑排序时采用两个采集点之间的距离和道路实际距离之间的差作为评判标准&lt;/li&gt;
+  &lt;li&gt;最后用指数分布来进行拟合&lt;/li&gt;
+  &lt;li&gt;在预处理和真正的算法执行的过程中，移除了许多作者所规定范围外的数据信息
+    &lt;ul&gt;
+      &lt;li&gt;时间相差小于2𝜎 的相邻点移除&lt;/li&gt;
+      &lt;li&gt;距离采集点超过两百米的路径的测量概率都为0，减少了候选路段匹配数量&lt;/li&gt;
+      &lt;li&gt;一旦道路距离比两个测量点距离大时，两条路相关的过滤概率会变小，路径距离比2000米时把概率调整为0&lt;/li&gt;
+      &lt;li&gt;屡屡超速的车辆的的GPS极端值不考虑&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+</description>
+        <pubDate>Sat, 14 Oct 2017 00:00:00 +0800</pubDate>
+        <link>http://localhost:4000/2017/10/Map-Matching/</link>
+        <guid isPermaLink="true">http://localhost:4000/2017/10/Map-Matching/</guid>
+        
+        
+      </item>
     
       <item>
         <title>Hello World - Vno</title>
